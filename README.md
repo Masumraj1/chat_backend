@@ -1,16 +1,46 @@
-# chart_backend
+# Dart 1-to-1 Chat Server (MongoDB সহ)
 
-A new Flutter project.
+এই project একটি **real-time 1-to-1 chat server** তৈরি করার জন্য।  
+Dart WebSocket server এবং MongoDB ব্যবহার করে বানানো হয়েছে।
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## **Project Structure**
 
-A few resources to get you started if this is your first Flutter project:
+dart_chat_backend/
+├─ lib/
+│ ├─ main.dart # Entry point, server start করে
+│ ├─ chat_server.dart # WebSocket server logic
+│ └─ db.dart # MongoDB connection + save/fetch messages
+└─ pubspec.yaml # Dart dependencies
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+---
+
+## **File Explains (Bangla)**
+
+### 1️⃣ `db.dart`
+- MongoDB এর সাথে connect করার জন্য।
+- Function গুলো:
+    - `init()` → MongoDB open করে।
+    - `saveMessage(msg)` → message save করে।
+    - `getMessagesForUser(userId)` → reconnect হলে previous messages fetch করে।
+
+**Important line explanation:**
+
+[//]: # (```dart)
+db = Db('mongodb://localhost:27017/chat_app');
+
+
+
+2️⃣ chat_server.dart
+
+WebSocket server তৈরি করা হয়।
+
+Connected users Map এ রাখা হয়।
+
+Function গুলো:
+
+_handleClient(socket) → নতুন client join হলে handle করে।
+
+_sendToUser(from, to, message) → private message পাঠায়।
