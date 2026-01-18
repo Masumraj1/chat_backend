@@ -8,6 +8,7 @@ class DB {
     // MongoDB URI: যদি local MongoDB থাকে
     db = Db('mongodb://localhost:27017/chat_app');
 
+
     await db.open();
     print('✅ Connected to MongoDB');
 

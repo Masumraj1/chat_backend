@@ -59,6 +59,7 @@ class ChatServer {
         'timestamp': DateTime.now().toIso8601String(),
       };
 
+
       // Save to MongoDB
       await DB.saveMessage(message);
 
