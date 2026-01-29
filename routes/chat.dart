@@ -4,12 +4,10 @@ import 'package:dart_frog_web_socket/dart_frog_web_socket.dart';
 import 'package:mongo_dart/mongo_dart.dart';
 import 'package:uuid/uuid.dart';
 
-// অনলাইন ক্লায়েন্টদের লিস্ট (UserId -> WebSocketChannel)
 final Map<String, dynamic> _activeClients = {};
 const _uuid = Uuid();
 
 Future<Response> onRequest(RequestContext context) async {
-  // Middleware থেকে ডাটাবেস কালেকশন এক্সেস করা
   final db = context.read<Db>();
   final messagesCol = db.collection('messages');
 
