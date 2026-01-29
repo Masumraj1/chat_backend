@@ -89,7 +89,8 @@ brew services start mongodb-community@7.0
 dart pub get
 
 # সার্ভার রান করুন
-dart run lib/bin/server.dart
+dart run lib/main.dart
+
 ```
 
 ১. পাইপলাইন (Pipeline)
