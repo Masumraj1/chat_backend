@@ -4,7 +4,9 @@ import 'package:dart_frog_web_socket/dart_frog_web_socket.dart';
 import 'package:mongo_dart/mongo_dart.dart';
 import 'package:uuid/uuid.dart';
 
-final Map<String, dynamic> _activeClients = {};
+// GLOBAL REGISTRY: Stores all online users.
+// Publicly accessible so other routes (like /status) can check online status.
+final Map<String, dynamic> activeClients = {};
 const _uuid = Uuid();
 
 Future<Response> onRequest(RequestContext context) async {
@@ -20,12 +22,13 @@ Future<Response> onRequest(RequestContext context) async {
           final data = jsonDecode(rawData.toString()) as Map<String, dynamic>;
           final type = data['type'] as String?;
 
-          // ১. ইউজার জয়েন করা
+          // --- 1. HANDLE USER JOIN ---
           if (type == 'join') {
             final userId = data['userId'] as String?;
             if (userId != null) {
               currentUserId = userId;
-              _activeClients[currentUserId!] = channel;
+              // Register user in the global online map
+              activeClients[currentUserId!] = channel;
               print('👤 User Joined: $currentUserId');
 
               channel.sink.add(jsonEncode({
@@ -36,7 +39,7 @@ Future<Response> onRequest(RequestContext context) async {
             return;
           }
 
-          // ২. চ্যাট মেসেজ হ্যান্ডেল করা
+          // --- 2. HANDLE REAL-TIME CHAT ---
           if (type == 'message') {
             final from = data['from'] as String? ?? 'unknown';
             final to = data['to'] as String? ?? 'unknown';
@@ -44,43 +47,45 @@ Future<Response> onRequest(RequestContext context) async {
 
             if (text.isEmpty) return;
 
-            // ডাটাবেস মডেল (ObjectId এরর ফিক্স সহ)
             final messageModel = {
-              '_id': ObjectId(), // মঙ্গোডিবি-র নিজস্ব আইডি
-              'id': _uuid.v4(),  // আপনার কাস্টম আইডি
+              '_id': ObjectId(),
+              'id': _uuid.v4(),
               'from': from,
               'to': to,
               'message': text,
               'timestamp': DateTime.now().toIso8601String(),
             };
 
-            // MongoDB-তে মেসেজ সেভ করা
+            // Save to Database
             await messagesCol.insertOne(messageModel);
-            print('💾 Message Saved to MongoDB Successfully!');
+            print('💾 Message Saved to MongoDB');
 
             final responsePayload = jsonEncode({
               'type': 'new_message',
               ...messageModel,
-              '_id': messageModel['_id'].toString(), // ক্লায়েন্টকে পাঠানোর আগে ObjectId-কে String করে নেয়া
+              '_id': messageModel['_id'].toString(),
             });
 
-            // রিসিভার যদি অনলাইন থাকে তবে তাকে পাঠানো
-            if (_activeClients.containsKey(to)) {
-              _activeClients[to].sink.add(responsePayload);
+            // ROUTING: Deliver to Receiver if they are Online
+            if (activeClients.containsKey(to)) {
+              activeClients[to].sink.add(responsePayload);
               print('📤 Message delivered to $to');
             }
 
-            // প্রেরককেও (নিজে) কনফার্মেশন হিসেবে পাঠানো
+            // ECHO: Send back to the sender
             channel.sink.add(responsePayload);
           }
         } catch (e) {
           print('❌ Error handling message: $e');
         }
       },
+      // --- 3. CLEANUP ON DISCONNECT ---
+      // This is crucial for the Status System to work.
+      // When the user closes the app, remove them from the 'Online' registry.
       onDone: () {
         if (currentUserId != null) {
-          _activeClients.remove(currentUserId);
-          print('❌ User Left: $currentUserId');
+          activeClients.remove(currentUserId);
+          print('❌ User Left (Offline): $currentUserId');
         }
       },
     );
